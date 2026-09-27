@@ -104,7 +104,10 @@ def test_review_output_is_validated():
                                                               {"foo": 1}] * 10,
                               "tier_2": None, "tier_3": ["a", 3, ""], "summary": 7, "ready": True})
     assert review["overall_score"] == 10 and len(review["tier_1"]) == 12
-    assert len(review["tier_1"][0]["title"]) == 600 and review["tier_3"] == ["a"] and review["ready"] is False
+    assert len(review["tier_1"][0]["title"]) <= 204 and review["tier_1"][0]["title"].endswith(" ...")
+    assert review["tier_3"] == ["a"] and review["ready"] is False
+    long = validate_review({"overall_score": 5, "tier_1": [], "tier_2": [{"title": "t", "detail": "word " * 400}]})
+    assert long["tier_2"][0]["detail"].endswith("word ...")  # cut between words, never inside one
     assert validate_review({"no": "review"}) is None
 
 

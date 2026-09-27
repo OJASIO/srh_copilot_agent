@@ -44,6 +44,7 @@ from agents.student_service.cv_check.schema import CV_REVIEW_SCHEMA
 from core.agent_base import BaseTask
 from core.guardrails import neutralise_document, strip_tags
 from core.language import detect_language as detect_question_language
+from core.language import today_text
 from core.pii import redact_pii
 from core.providers import finish_reason, parse_json
 from core.schemas import AgentRequest, AgentResponse
@@ -68,7 +69,14 @@ _EMPTY_REVIEW = {
 
 
 def _text(value, limit: int) -> str:
-    return str(value).strip()[:limit] if value is not None else ""
+    """Strip and cap a model string; a cut is made at a word boundary and marked with "..."."""
+    text = str(value).strip() if value is not None else ""
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    if " " in cut[limit // 2:]:
+        cut = cut[:cut.rfind(" ")]
+    return cut.rstrip(" ,;:") + " ..."
 
 
 def validate_review(data: dict) -> dict | None:
@@ -87,11 +95,11 @@ def validate_review(data: dict) -> dict | None:
             if isinstance(item, str):
                 item = {"title": "", "detail": item}
             if isinstance(item, dict) and (item.get("title") or item.get("detail")):
-                items.append({k: _text(item.get(k), 600) for k in keys})
+                items.append({k: _text(item.get(k), 200 if k == "title" else 1500) for k in keys})
         review[tier] = items[:_LIMITS[tier]]
-    review["tier_3"] = [_text(t, 300) for t in (data.get("tier_3") or []) if isinstance(t, str) and t.strip()]
+    review["tier_3"] = [_text(t, 500) for t in (data.get("tier_3") or []) if isinstance(t, str) and t.strip()]
     review["tier_3"] = review["tier_3"][:_LIMITS["tier_3"]]
-    review["summary"] = _text(data.get("summary"), 1200)
+    review["summary"] = _text(data.get("summary"), 1500)
     review["ready"] = not review["tier_1"]  # derived, not trusted from the model
     return review
 
@@ -169,7 +177,8 @@ class CvCheckTask(BaseTask):
             job_context = f"{label}:\n<job_description>\n{job_clean}\n</job_description>"
 
         prompt = s.prompts.get(f"cv_check_{lang}", agent_id=self.agent.id).render(
-            job_context=job_context, document_facts=render_facts(facts, lang), cv_text=cv_for_model)
+            today=today_text(lang), job_context=job_context, document_facts=render_facts(facts, lang),
+            cv_text=cv_for_model)
         structured = s.settings.llm_provider != "mock"
         review, attempts = None, 0
         for max_tokens in (REVIEW_MAX_TOKENS, RETRY_MAX_TOKENS):

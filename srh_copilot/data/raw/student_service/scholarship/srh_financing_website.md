@@ -19,7 +19,8 @@ To be considered, complete your study application by the deadline: 15 January fo
 The first step is taken by the student. The study advisor does not start the process.
 
 1. If you meet the criteria of one of the SRH Scholarships, you contact your study advisor yourself.
-2. After that you receive an invitation to apply for the scholarship.
+2. After that you receive an invitation to apply for the scholarship. The website does not say who
+   sends the invitation; ask your study advisor or Admission (apply.hsg@srh.de).
 3. You submit the scholarship application within 2 weeks of receiving that invitation.
 
 You need a confirmed study offer from SRH.

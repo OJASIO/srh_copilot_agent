@@ -335,3 +335,11 @@ def test_cut_off_review_is_retried_with_a_larger_budget(stack):
     resp = _upload(stack, "cv.docx", make_docx(EN_CV))
     assert services.llm.budgets == [2500, 4000]
     assert resp.structured["findings"]["review_valid"] and resp.structured["findings"]["review_attempts"] == 2
+
+
+def test_cv_prompt_carries_todays_date(stack):
+    from core.language import today_text
+
+    services, _ = stack
+    _upload(stack, "lebenslauf.docx", make_docx(DE_CV))
+    assert f"HEUTIGES DATUM: {today_text('de')}" in services.llm.prompts[-1]

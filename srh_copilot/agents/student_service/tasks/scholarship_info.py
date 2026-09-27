@@ -22,7 +22,7 @@ from __future__ import annotations
 import re
 
 from core.agent_base import BaseTask
-from core.language import detect_language
+from core.language import detect_language, today_text
 from core.schemas import AgentRequest, AgentResponse
 
 # office id: (name, contact, patterns). Order is the display order.
@@ -40,7 +40,8 @@ _OFFICES: dict[str, tuple[str, str, list[str]]] = {
     "admission": ("Admission", "apply.hsg@srh.de", [
         r"performance scholarships?", r"entrepreneurship scholarships?", r"women for leadership",
         r"talent scholarships?", r"women in sound", r"future of tech", r"women in tech",
-        r"srh[- ]scholarships?", r"srh[- ]stipendi(?:um|en)\b(?! f[üu]r begabte)", r"fee reduction",
+        r"srh[- ]scholarships?\b(?! overview)", r"srh[- ]stipendi(?:um|en)\b(?! f[üu]r begabte)",
+        r"fee reduction", r"first[- ]year tuition",
         r"gebührenreduzierung", r"ielts",
     ]),
     "examination_office": ("Examination Office",
@@ -63,8 +64,9 @@ _FALLBACK = {
 }
 
 
-def contacts_for(question: str, answer: str, lang: str = "en") -> str:
-    text = _NOISE.sub(" ", f"{question}\n{answer}")
+def contacts_for(question: str, answer: str, lang: str = "en", previous: str = "") -> str:
+    """`previous` is the student's earlier question in a follow-up ("and the deadline?")."""
+    text = _NOISE.sub(" ", f"{previous}\n{question}\n{answer}")
     lines = [f"- {name}: {contact}" for office, (name, contact, _) in _OFFICES.items()
              if any(rx.search(text) for rx in _COMPILED[office])]
     lines = lines or _FALLBACK.get(lang, _FALLBACK["en"])
@@ -83,15 +85,16 @@ class ScholarshipInfoTask(BaseTask):
         hits = await s.retriever.search_many(queries, [self.collection],
                                              top_k=self.agent.setting("retrieval_top_k", 5))
         context = s.retriever.as_context(hits)
-        system = s.prompts.get("scholarship_system", agent_id=self.agent.id).render(context=context)
+        lang = detect_language(request.message)
+        system = s.prompts.get("scholarship_system", agent_id=self.agent.id).render(
+            today=today_text("en"), context=context)
 
         messages = [{"role": "system", "content": system}]
         messages += [{"role": m.role, "content": m.content} for m in turns[-6:]]
         messages.append({"role": "user", "content": request.message})
         answer = await s.llm.chat(messages)
 
-        lang = detect_language(request.message)
-        content = f"{answer}\n\n{contacts_for(request.message, answer, lang)}"
+        content = f"{answer}\n\n{contacts_for(request.message, answer, lang, previous)}"
         return AgentResponse(
             request_id=request.request_id, agent_id=self.agent.id, task_id=self.id,
             content=content, model_text=str(answer), citations=s.retriever.as_citations(hits),

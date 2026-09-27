@@ -27,6 +27,16 @@ _EN = {
 _WORD = re.compile(r"[a-zäöüß]+")
 
 
+def today_text(lang: str = "en") -> str:
+    """Today's date for prompts, so a model does not take a current date for the future."""
+    from datetime import date
+
+    d = date.today()
+    months = ("January", "February", "March", "April", "May", "June", "July", "August", "September",
+              "October", "November", "December")  # fixed names: strftime("%B") depends on the server locale
+    return d.strftime("%d.%m.%Y") if lang == "de" else f"{d.day} {months[d.month - 1]} {d.year}"
+
+
 def detect_language(text: str, default: str = "en") -> str:
     """Returns "de" or "en"."""
     words = _WORD.findall((text or "").lower())
