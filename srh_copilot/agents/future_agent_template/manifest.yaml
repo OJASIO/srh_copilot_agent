@@ -1,0 +1,16 @@
+# Copy this folder, rename it to your agent id (snake_case), and edit.
+# The folder name and `id` must match. Then add the id to config/agents.yaml.
+id: future_agent_template
+name: Template Agent
+description: Starting point for a new domain agent. Replace this text; the router shows it to the LLM.
+version: 0.1.0
+owner: your.name@srh.de
+routing_keywords: [template, example]
+knowledge_collections: [future_agent_template/general]
+default_task: null          # null = let the agent choose when the user did not pick a task
+tasks:
+  - id: answer_question
+    name: Answer a question
+    description: Answer questions using the agent's knowledge collections (RAG).
+    accepts_files: false
+    input_hint: Ask your question in English or German.

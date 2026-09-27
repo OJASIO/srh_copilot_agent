@@ -1,0 +1,4 @@
+# Shell scripts run on Linux (GPU server, Docker): force LF even when committed from Windows.
+*.sh  text eol=lf
+# Batch files run on Windows: force CRLF, or cmd.exe silently fails.
+*.bat text eol=crlf

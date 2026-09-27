@@ -1,0 +1,52 @@
+id: student_service
+name: Student Service
+description: >-
+  First point of contact for students: general study organisation, forms,
+  scholarships and financing, CV and application document checks, and routing
+  to the right SRH department.
+version: 0.1.0
+owner: "student_service team (CV check: teammate; scholarship: Subodh Nadkar)"
+routing_keywords:
+  - scholarship
+  - stipendium
+  - deutschlandstipendium
+  - bafög
+  - bafoeg
+  - financing
+  - funding
+  - cv
+  - resume
+  - lebenslauf
+  - cover letter
+  - student service
+  - enrolment
+  - enrollment
+  - semester ticket
+knowledge_collections:
+  - student_service/general
+  - student_service/scholarship
+default_task: null
+tasks:
+  - id: cv_check
+    name: CV Check
+    description: Upload your CV (PDF or DOCX, English or German) and get a tiered review (critical errors, improvements, counselling topics) plus an ATS compatibility score. Personal data is masked before the review.
+    accepts_files: true
+    file_types: [pdf, docx]
+    submit_label: Review my CV
+    input_hint: Ask a follow-up question about your review
+    fields:
+      - id: review_language
+        label: Review language
+        type: select
+        options: [auto, en, de]
+        option_labels: {auto: Detect from the CV, en: English, de: Deutsch}
+        default: auto
+      - id: job_description
+        label: Job description (optional)
+        type: textarea
+        help: Paste the job advert you are applying for; the review then checks which requirements your CV does not cover.
+  - id: scholarship_info
+    name: Scholarship Information
+    description: Which scholarships exist at SRH (Deutschlandstipendium, SRH Performance Scholarship, STIBET, Erasmus+, PROMOS, Studienstiftung), who is eligible, deadlines and the right contact.
+    accepts_files: false
+    input_hint: Ask e.g. "Which scholarships can an international master student apply for?"

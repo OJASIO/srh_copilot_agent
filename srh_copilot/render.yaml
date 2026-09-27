@@ -1,0 +1,54 @@
+# Render blueprint for the hosted prototype.
+#
+# One free web service running both processes (see scripts/start_demo.sh).
+# Free tier: 750 instance hours per month, sleeps after 15 minutes idle and
+# takes up to a minute to wake, no persistent disk. Good enough to demo,
+# not a production deployment.
+#
+# Secrets are NOT in this file. Set them in the Render dashboard under
+# Environment, or answer the prompts when the blueprint is first applied.
+services:
+  - type: web
+    name: srh-copilot
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerCommand: ./scripts/start_demo.sh
+    healthCheckPath: /_stcore/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: APP_ENV
+        value: dev
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: EMBEDDING_BACKEND
+        value: remote
+      - key: VECTOR_BACKEND
+        value: memory
+      - key: ENABLED_AGENTS
+        value: student_service
+      - key: RATE_LIMIT
+        value: 20/minute
+      # Set these in the dashboard. sync:false means Render asks for a value
+      # and never stores it in the repository.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DEMO_PASSWORD
+        sync: false
+      - key: DEMO_BANNER
+        value: >-
+          Prototype for a university case study. Do not upload a real CV:
+          this deployment uses the free Gemini tier, whose terms allow Google
+          to use submitted content and have humans review it. Use a test CV.
+      # Generated once by Render and kept stable across deploys.
+      - key: API_KEY
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true

@@ -1,0 +1,15 @@
+[server]
+headless = true
+# Matches max_upload_mb in config/settings.py; the API rejects anything larger.
+maxUploadSize = 10
+# On for local use. Behind a rewriting proxy (the Render demo, jupyter-server-proxy
+# on the GPU node) the XSRF check breaks file uploads, so scripts/start_demo.sh and
+# deploy/selfhosted/copilot.sh switch it off on the command line for those setups
+# only. The API stays the security boundary (API key, JWT, rate limit, upload cap).
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "light"

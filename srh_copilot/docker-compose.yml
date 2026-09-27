@@ -1,0 +1,39 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: copilot
+      POSTGRES_PASSWORD: copilot
+      POSTGRES_DB: copilot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U copilot"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      VECTOR_BACKEND: pgvector
+      DATABASE_URL: postgresql+psycopg://copilot:copilot@db:5432/copilot
+    depends_on:
+      db:
+        condition: service_healthy
+    ports: ["8000:8000"]
+    volumes:
+      - ./logs:/app/logs
+
+  frontend:
+    build: .
+    env_file: .env
+    environment:
+      COPILOT_API_URL: http://api:8000
+    command: streamlit run frontend/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
+    depends_on: [api]
+    ports: ["8501:8501"]
+
+volumes:
+  pgdata:

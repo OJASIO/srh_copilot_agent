@@ -1,0 +1,20 @@
+# Plug board for domain agents.
+#
+# An agent is "plugged in" when its folder under agents/ contains a manifest.yaml
+# and an agent.py, AND its id is listed under `enabled` below (or ENABLED_AGENTS
+# in the environment, which overrides this file). Remove the id to unplug it;
+# the code can stay on disk. Order here is the display order in the frontend.
+
+enabled:
+  - student_service
+  # - career_support
+  # - linc
+  # - teaching_innovation
+  # - hr_compliance
+  # - international_office
+  # - strategic_intelligence
+
+# Optional per-agent overrides. Keys must match manifest ids.
+overrides:
+  student_service:
+    retrieval_top_k: 6
