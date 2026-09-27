@@ -42,9 +42,13 @@ not the original internal documents. Original PDFs stay outside the repository (
 
 - 27.09.2026: `scholarship/srh_financing_website.md`, "how to apply" written as numbered steps that say the
   student contacts the study advisor first (the in-house evaluation answer #6 had it the other way round).
+- 27.09.2026: same file, "the website does not say who sends the invitation" added, because the model
+  filled that gap with "the study advisor" (evaluation question 24).
 
 ## Open points
 
 - Hamm campus phone: the hotline FAQ lists "+49 92381 9291121", which looks like a typo (Hamm's area code is 02381). Left out until confirmed.
 - International Office scholarships (STIBET, Erasmus+, PROMOS, BaWue, HAW.International): amounts and deadlines are not in any source yet; the assistant refers these questions to the International Office.
 - Semester ticket price for winter semester 2026/27 and the re-entry process were still open in the sources.
+- Who sends the SRH Scholarship invitation (study advisor or Admission) is not stated in any source; ask
+  Student Service or Admission and add it to `scholarship/srh_financing_website.md`.

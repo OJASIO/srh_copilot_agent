@@ -280,3 +280,41 @@ def test_gemini_reasoning_effort_is_opt_in(settings):
     assert llm.extra_body == {}
     llm, _ = build_llm_and_embedder(settings.model_copy(update={**base, "gemini_reasoning_effort": "none"}))
     assert llm.extra_body == {"reasoning_effort": "none"}
+
+
+def test_history_stores_the_model_text_without_appended_blocks(registry, services):
+    orch = Orchestrator(registry, services)
+    asyncio.run(orch.run(AgentRequest(session_id="hist", user_id="u", message="What is the Deutschlandstipendium?",
+                                      agent_id="student_service", task_id="scholarship_info")))
+    stored = asyncio.run(services.sessions.history("hist", "u"))[-1].content
+    assert "Responsible contact:" not in stored and "Note: this assistant" not in stored
+
+
+def test_contacts_ignore_the_source_name_and_use_the_previous_question():
+    from agents.student_service.tasks.scholarship_info import contacts_for
+
+    block = contacts_for("Can I apply for the Studienstiftung myself?",
+                         "No. According to the SRH scholarship overview the Examination Office nominates.")
+    assert "Admission" not in block and "Examination Office" in block
+    follow = contacts_for("And what is the deadline for the April intake?", "15 January.",
+                          previous="Tell me about the SRH Scholarships.")
+    assert "Admission" in follow
+
+
+def test_prompts_carry_todays_date(registry, services):
+    from core.language import today_text
+
+    calls = []
+    original = services.llm.chat
+
+    async def spy(messages, **kw):
+        calls.append(messages[0]["content"])
+        return await original(messages, **kw)
+
+    services.llm.chat = spy
+    try:
+        _run(registry, services, message="Deutschlandstipendium?", agent_id="student_service",
+             task_id="scholarship_info")
+    finally:
+        services.llm.chat = original
+    assert today_text("en") in calls[-1]

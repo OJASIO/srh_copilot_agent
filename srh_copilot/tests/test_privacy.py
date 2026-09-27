@@ -199,3 +199,10 @@ def test_cv_eval_cases_leak_nothing_and_keep_content(tmp_path):
         assert r["review_valid"] and json.dumps(REVIEW)  # stub answer parsed
         if case.injection:
             assert r["injection_removed"]
+
+
+def test_birth_labels_stay_so_date_and_place_can_be_told_apart():
+    text = anonymise("Tim Becker\nGeburtsdatum: 02.07.1998\nGeburtsort: Freiburg\nSKILLS\nBorn to code",
+                     filename="cv.docx").text
+    assert "Geburtsdatum: [DOB REMOVED]" in text and "Geburtsort: [BIRTHPLACE REMOVED]" in text
+    assert "Freiburg" not in text and "Born to code" in text

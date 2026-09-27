@@ -3,8 +3,8 @@
 Layers, in this order:
   1. Contact data: email, phone (shared detectors in core/pii.py, including
      "0151/1234567" and "(06221) 123456"), LinkedIn, GitHub, personal websites
-  2. Date and place of birth, by label ("Geburtsdatum:", "DOB", "geb.") or a
-     German "* 01.01.1999" line
+  2. Date and place of birth, by label ("Geburtsdatum:", "Geburtsort:", "DOB", "geb.")
+     with the label kept, or a German "* 01.01.1999" line
   3. Personal details by label, value masked, label kept: nationality, marital
      status, religion, children, gender, age, residence or work permit, parents,
      ID and tax numbers
@@ -41,10 +41,18 @@ _URL = re.compile(r"(?:https?://|www\.)[^\s|,;]+|\b[\w\-]+\.(?:de|com|net|org|io
 _SEP = r"[ \t]*[:|\t][ \t]*"  # label separator on the same line: colon, table cell or tab
 _LINE_START = r"(^|[|\u2022;]\s*|\s{2,})"  # a label starts a line or a table cell
 
-_DOB_LABELS = (r"Geburtsdatum|Geburtsort|Geburtstag|Geburtsdatum und -ort|Geboren am|Geboren in|Geboren|geb\.|"
-               r"Date of Birth|Date and Place of Birth|Date & Place of Birth|Place of Birth|Birthplace|"
-               r"Birth date|Birthdate|Born|DOB|D\.O\.B\.")
-_DOB = re.compile(rf"(?<![\w])({_DOB_LABELS})(?![\w])[^\n|]*", re.IGNORECASE)
+# Birth data: the label stays and only the value is masked, so the reviewer can tell
+# "Geburtsdatum: [DOB REMOVED]" from "Geburtsort: [BIRTHPLACE REMOVED]" (two identical
+# placeholders made the model report a missing birthplace). Longest labels first.
+_BIRTHPLACE_LABELS = r"Place of Birth|Geburtsort|Birthplace|Geboren in"
+_DOB_LABELS = (r"Date and Place of Birth|Date & Place of Birth|Geburtsdatum und -ort|Geburtsdatum/-ort|"
+               r"Date of Birth|Geburtsdatum|Geburtstag|Geboren am|Birth date|Birthdate|D\.O\.B\.|DOB|"
+               + _BIRTHPLACE_LABELS)
+# Everyday words ("Born to code") count only when a separator, a date or am/on/in follows.
+_DOB_WEAK = r"(?:Geboren|geb\.|Born)(?=[ \t]*(?:[:|\t]|(?:am|on|in)\b|\d))"
+_DOB = re.compile(rf"(?<![\w])({_DOB_LABELS}|{_DOB_WEAK})(?![\w])([ \t]*[:|\t]?[ \t]*)([^\n|]+)",
+                  re.IGNORECASE)
+_BIRTHPLACE = re.compile(rf"(?i)^(?:{_BIRTHPLACE_LABELS})$")
 _DOB_STAR = re.compile(r"(?m)^\s*\*\s*\d{1,2}\.\s?\d{1,2}\.\s?\d{2,4}[^\n|]*")
 
 _PERSONAL_LABELS = (
@@ -69,12 +77,13 @@ _NAME_LABELS = (r"Name|Vor- und Nachname|Vor-und Nachname|Vollständiger Name|Fu
 _NAME_LABELLED = re.compile(rf"(?mi)^\s*(?:{_NAME_LABELS}){_SEP}([^\n|;\u2022]+)")
 
 _LABEL_ONLY = {
-    "dob": re.compile(rf"(?i)^\s*(?:{_DOB_LABELS})\s*:?\s*$"),
+    "dob": re.compile(rf"(?i)^\s*(?:{_DOB_LABELS}|Geboren|geb\.|Born)\s*:?\s*$"),
     "personal": re.compile(rf"(?i)^\s*(?:{_PERSONAL_LABELS})\s*:?\s*$"),
     "address": re.compile(rf"(?i)^\s*(?:{_ADDRESS_LABELS})\s*:?\s*$"),
     "name": re.compile(rf"(?i)^\s*(?:{_NAME_LABELS})\s*:?\s*$"),
 }
 _TOKEN = {"dob": "[DOB REMOVED]", "personal": "[PERSONAL DETAIL REMOVED]", "address": "[ADDRESS REMOVED]"}
+BIRTHPLACE_TOKEN = "[BIRTHPLACE REMOVED]"
 
 # Street names. Case-sensitive on purpose, and "ring" not after a vowel, so that
 # "Engineering 2024" or "Monitoring 24/7" are not taken for an address. House
@@ -260,7 +269,13 @@ def anonymise(text: str, *, filename: str = "", data: bytes | None = None) -> An
     add("phone", n)
 
     # 2. date and place of birth
-    text, n = _DOB.subn("[DOB REMOVED]", text)
+    def birth(m: re.Match) -> str:
+        label, sep = m.group(1), m.group(2) or " "
+        token = BIRTHPLACE_TOKEN if _BIRTHPLACE.match(label) else "[DOB REMOVED]"
+        trailing = m.group(3)[len(m.group(3).rstrip()):]
+        return f"{label}{sep}{token}{trailing}"
+
+    text, n = _DOB.subn(birth, text)
     add("birth", n)
     text, n = _DOB_STAR.subn("[DOB REMOVED]", text)
     add("birth", n)
@@ -282,7 +297,8 @@ def anonymise(text: str, *, filename: str = "", data: bytes | None = None) -> An
             value = lines[i + 1].strip()
             if (_LABEL_ONLY[kind].match(lines[i]) and 0 < len(value) <= 60
                     and not value.startswith("[") and not is_title_line(value)):
-                lines[i + 1] = _TOKEN[kind]
+                label = lines[i].strip().rstrip(":").strip()
+                lines[i + 1] = BIRTHPLACE_TOKEN if kind == "dob" and _BIRTHPLACE.match(label) else _TOKEN[kind]
                 add({"dob": "birth", "personal": "personal_detail"}.get(kind, kind), 1)
     text = "\n".join(lines)
 

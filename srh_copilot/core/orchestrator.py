@@ -67,11 +67,15 @@ class Orchestrator:
         response.trace.update({"route": route.method, "route_confidence": route.confidence,
                                "hops": hops, "latency_ms": round((time.perf_counter() - t0) * 1000)})
 
-        # request.message is already masked by check_input
+        # request.message is already masked by check_input. The assistant turn is stored as the
+        # model's own text: the contact block and disclaimer that code appends would otherwise
+        # come back as history and the model starts writing its own copies of them.
+        stored = response.content if response.model_text is None or response.trace.get("blocked_output") \
+            else response.model_text
         await s.sessions.append(request.session_id, request.user_id,
                                 Message(role="user", content=request.message, task_id=response.task_id))
         await s.sessions.append(request.session_id, request.user_id,
-                                Message(role="assistant", content=response.content, task_id=response.task_id))
+                                Message(role="assistant", content=stored, task_id=response.task_id))
         await s.sessions.audit({
             "type": "chat", "session": request.session_id, "user": request.user_id,
             "agent": response.agent_id, "task": response.task_id,

@@ -153,6 +153,10 @@ _PROMPT_LEAK = {
 }
 
 
+def _mask_secrets(text: str) -> str:
+    return re.sub(r"(?i)(api[_-]?key|password|passwort)\s*[:=]\s*\S+", r"\1: <redacted>", text)
+
+
 def _prompt_lines(texts: list[str]) -> set[str]:
     """Distinctive lines of the prompt templates (no placeholders, 50+ characters)."""
     lines = set()
@@ -202,7 +206,9 @@ class Guardrails:
         if not content.strip():
             content = _EMPTY_ANSWER[lang]
         # never leak raw secrets that may have ended up in retrieved text
-        content = re.sub(r"(?i)(api[_-]?key|password|passwort)\s*[:=]\s*\S+", r"\1: <redacted>", content)
+        content = _mask_secrets(content)
+        if response.model_text:
+            response.model_text = _mask_secrets(response.model_text)
         if self.leaks_prompt(content):
             content = _PROMPT_LEAK[lang]
             response.trace["blocked_output"] = "prompt_leak"
